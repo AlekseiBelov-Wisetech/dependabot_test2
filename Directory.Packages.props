@@ -1,23 +1,22 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <PropertyGroup>
-        <NeutralLanguage>en-US</NeutralLanguage>
-        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageVersion Include="AWSSDK.S3" Version="3.7.405.8" />
-        <PackageVersion Include="BouncyCastle" Version="1.8.9" />
-        <PackageVersion Include="Microsoft.AspNetCore.App" Version="8.0.8" />
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.32" />
-        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="3.7.0" />
-        <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.32" />
-        <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="3.1.32" />
-        <PackageVersion Include="Microsoft.Extensions.Logging" Version="3.0.0" />
-        <PackageVersion Include="Newtonsoft.Json" Version="12.0.3" />
-        <PackageVersion Include="Polly" Version="8.5.1"/>
-        <PackageVersion Include="System.Data.SQLite" Version="1.0.116" />
-        <PackageVersion Include="Snappier" Version="1.1.0" />
-        <PackageVersion Include="System.Net.Http" Version="4.1.4" />
-        <PackageVersion Include="System.Text.Encodings.Web" Version="4.5.0" />
-    </ItemGroup>
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.405.8" />
+    <PackageVersion Include="BouncyCastle" Version="1.8.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.App" Version="8.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.32" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="3.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.32" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="3.1.32" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="3.0.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageVersion Include="Polly" Version="8.5.1"/>
+    <PackageVersion Include="System.Data.SQLite" Version="1.0.116" />
+    <PackageVersion Include="Snappier" Version="1.1.0" />
+    <PackageVersion Include="System.Net.Http" Version="4.1.4" />
+    <PackageVersion Include="System.Text.Encodings.Web" Version="4.5.0" />
+  </ItemGroup>
 </Project>
