@@ -1,8 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <Company>WiseTech Global</Company>
-        <Copyright>© WiseTech Global 2001-$([System.DateTime]::Today.ToString('yyyy')). All rights reserved.</Copyright>
         <NeutralLanguage>en-US</NeutralLanguage>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     </PropertyGroup>
