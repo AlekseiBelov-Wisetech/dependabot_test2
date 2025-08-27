@@ -25,9 +25,16 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $maxAllowed = [int]("${{ github.event.inputs.maxProjectDuplicates }}")
-          Write-Host "🔧 Max allowed duplicates per package: $maxAllowed"
+          # SETTINGS (keep these at the top)
+          $defaultMaxAllowed = 2
+          $maxAllowedInput = "${{ github.event.inputs.maxProjectDuplicates }}"
+          if ([string]::IsNullOrWhiteSpace($maxAllowedInput)) {
+              $maxAllowed = $defaultMaxAllowed
+          } else {
+              $maxAllowed = [int]$maxAllowedInput
+          }
 
+          Write-Host "🔧 Max allowed duplicates per package: $maxAllowed"
           Write-Host "🔍 Scanning for Directory.Packages.props files..."
 
           $allProps = Get-ChildItem -Recurse -Filter "Directory.Packages.props"
