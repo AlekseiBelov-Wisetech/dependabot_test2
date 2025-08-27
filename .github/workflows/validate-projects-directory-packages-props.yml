@@ -1,0 +1,60 @@
+﻿name: Validate Projects' Directory.Packages.props
+
+on:
+  workflow_dispatch:  # Manual trigger from GitHub UI
+
+jobs:
+  validate-packages:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate Directory.Packages.props usage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "🔍 Scanning for Directory.Packages.props files..."
+
+          $allProps = Get-ChildItem -Recurse -Filter "Directory.Packages.props"
+          $rootProps = $allProps | Where-Object { $_.DirectoryName -eq (Get-Location).Path }
+          $projectProps = $allProps | Where-Object { $_.FullName -ne $rootProps.FullName }
+
+          $packageUsage = @{}
+
+          foreach ($file in $projectProps) {
+              [xml]$xml = Get-Content $file.FullName
+
+              $packages = $xml.Project.ItemGroup.PackageVersion
+              foreach ($pkg in $packages) {
+                  $id = $pkg.Include
+                  if (-not $packageUsage.ContainsKey($id)) {
+                      $packageUsage[$id] = @()
+                  }
+                  $packageUsage[$id] += $file.FullName
+              }
+          }
+
+          $violations = @{}
+
+          foreach ($entry in $packageUsage.GetEnumerator()) {
+              if ($entry.Value.Count -ge 2) {
+                  $violations[$entry.Key] = $entry.Value
+              }
+          }
+
+          if ($violations.Count -gt 0) {
+              Write-Host "`n❌ The following packages are used in 2 or more project-level Directory.Packages.props files:"
+              foreach ($pkg in $violations.Keys) {
+                  Write-Host "`n🔸 Package: $pkg"
+                  foreach ($path in $violations[$pkg]) {
+                      Write-Host "   - $path"
+                  }
+              }
+              Write-Error "`n🛑 Some packages are duplicated. Please move them to the root Directory.Packages.props."
+              exit 1
+          } else {
+              Write-Host "`n✅ All packages are correctly centralized."
+          }
