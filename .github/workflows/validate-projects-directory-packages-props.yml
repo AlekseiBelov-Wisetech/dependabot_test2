@@ -1,7 +1,12 @@
-﻿name: Validate Projects' Directory.Packages.props
+name: Validate Projects' Directory.Packages.props
 
 on:
-  workflow_dispatch:  # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      maxProjectDuplicates:
+        description: 'Maximum number of project-level props files a package can appear in before it is considered a violation'
+        required: false
+        default: '2'
 
 jobs:
   validate-packages:
@@ -15,6 +20,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+
+          $maxAllowed = [int]("${{ github.event.inputs.maxProjectDuplicates }}")
+          Write-Host "🔧 Max allowed duplicates per package: $maxAllowed"
 
           Write-Host "🔍 Scanning for Directory.Packages.props files..."
 
@@ -40,21 +48,21 @@ jobs:
           $violations = @{}
 
           foreach ($entry in $packageUsage.GetEnumerator()) {
-              if ($entry.Value.Count -ge 2) {
+              if ($entry.Value.Count -gt $maxAllowed) {
                   $violations[$entry.Key] = $entry.Value
               }
           }
 
           if ($violations.Count -gt 0) {
-              Write-Host "`n❌ The following packages are used in 2 or more project-level Directory.Packages.props files:"
+              Write-Host "`n❌ The following packages are used in more than $maxAllowed project-level Directory.Packages.props files:"
               foreach ($pkg in $violations.Keys) {
                   Write-Host "`n🔸 Package: $pkg"
                   foreach ($path in $violations[$pkg]) {
                       Write-Host "   - $path"
                   }
               }
-              Write-Error "`n🛑 Some packages are duplicated. Please move them to the root Directory.Packages.props."
+              Write-Error "`n🛑 Some packages are overused. Please move them to the root Directory.Packages.props."
               exit 1
           } else {
-              Write-Host "`n✅ All packages are correctly centralized."
+              Write-Host "`n✅ All packages are within the allowed threshold ($maxAllowed)."
           }
