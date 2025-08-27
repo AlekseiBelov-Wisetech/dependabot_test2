@@ -6,7 +6,7 @@ class Program
 	static void Main()
 	{
 		string originalText = "Hello, this is a test string to compress using Snappy!";
-		Console.WriteLine("Original: " + originalText);
+		Console.WriteLine("Original message: " + originalText);
 
 		// Convert string to byte array
 		byte[] inputBytes = Encoding.UTF8.GetBytes(originalText);

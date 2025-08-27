@@ -9,5 +9,6 @@
         <PackageReference Include="AMQPNetLite" />
         <PackageReference Include="Snappier" />
         <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Polly" />
     </ItemGroup>
 </Project>
