@@ -1,6 +1,10 @@
 name: Validate Projects' Directory.Packages.props
 
 on:
+  pull_request:
+    paths:
+      - '**/Directory.Packages.props'
+
   workflow_dispatch:
     inputs:
       maxProjectDuplicates:
