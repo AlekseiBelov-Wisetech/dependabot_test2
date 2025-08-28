@@ -6,10 +6,18 @@ on:
       - 'Directory.Packages.props'
 
   workflow_dispatch:
+    inputs:
+      skippedFolders:
+        description: 'Comma-separated list of top-level folders to skip (e.g., Common,Shared)'
+        required: false
+        default: 'Common'
 
 jobs:
   suggest-package-demotion:
     runs-on: windows-latest
+
+    env:
+      DEFAULT_SKIPPED_FOLDERS: 'Common'  # Used in pull_request if no manual input
 
     steps:
       - name: Checkout repository
@@ -22,6 +30,16 @@ jobs:
 
           Write-Host "🔍 Analyzing root Directory.Packages.props..."
 
+          # Determine skipped folders (from input or env)
+          $inputSkipped = "${{ github.event.inputs.skippedFolders }}"
+          if ([string]::IsNullOrWhiteSpace($inputSkipped)) {
+              $inputSkipped = "$env:DEFAULT_SKIPPED_FOLDERS"
+          }
+
+          $skippedFolders = $inputSkipped -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+          Write-Host "🚫 Skipping packages used in folders: $($skippedFolders -join ', ')"
+
+          # Load root-level packages
           $rootPath = Join-Path $PWD "Directory.Packages.props"
           if (-not (Test-Path $rootPath)) {
             Write-Error "❌ Root Directory.Packages.props not found!"
@@ -38,21 +56,24 @@ jobs:
 
           Write-Host "📦 Packages in root: $($rootPackages -join ', ')"
 
-          # Map: package -> set of top-level folders where it's used
+          # Initialize usage tracking
           $usageMap = @{}
+          $usedInSkippedFolders = @{}
+
           foreach ($pkg in $rootPackages) {
               $usageMap[$pkg] = New-Object System.Collections.Generic.HashSet[string]
+              $usedInSkippedFolders[$pkg] = $false
           }
 
-          # Get all csproj files
+          # Get all .csproj files
           $csprojFiles = Get-ChildItem -Recurse -Filter *.csproj
 
           foreach ($file in $csprojFiles) {
               $relativePath = $file.FullName.Substring($PWD.Path.Length + 1)
-              $parts = $relativePath -split '\\|\/'
+              $parts = $relativePath -split '[\\/]'  # Normalize path for Windows/Linux
+
               if ($parts.Length -lt 2) {
-                  # Skip csproj files not inside a top-level folder
-                  continue
+                  continue  # Skip files not inside a folder
               }
 
               $topFolder = $parts[0]
@@ -62,26 +83,37 @@ jobs:
 
               foreach ($pkg in $rootPackages) {
                   if ($packageRefs -contains $pkg) {
-                      $null = $usageMap[$pkg].Add($topFolder)
+                      if ($skippedFolders -contains $topFolder) {
+                          $usedInSkippedFolders[$pkg] = $true
+                      } else {
+                          $null = $usageMap[$pkg].Add($topFolder)
+                      }
                   }
               }
           }
 
+          # Find root packages that are used in <=2 project folders (excluding skipped ones)
           $recommendations = @{}
 
-          foreach ($entry in $usageMap.GetEnumerator()) {
-              $pkg = $entry.Key
-              $folders = $entry.Value
+          foreach ($pkg in $rootPackages) {
+              if ($usedInSkippedFolders[$pkg]) {
+                  Write-Host "📁 Skipping '$pkg' — used in skipped folder(s)."
+                  continue
+              }
+
+              $folders = $usageMap[$pkg]
               $folderCount = $folders.Count
+
               if ($folderCount -le 2) {
                   $recommendations[$pkg] = $folders
               }
           }
 
+          # Output results
           if ($recommendations.Count -eq 0) {
-              Write-Host "`n✅ All root packages are widely used across project folders. No recommendations."
+              Write-Host "`n✅ All root packages are widely used or used in skipped folders. No recommendations."
           } else {
-              Write-Host "`n🔔 The following packages are defined in the root Directory.Packages.props but are only used in 1 or 2 project folders:"
+              Write-Host "`n🔔 The following packages are defined in the root Directory.Packages.props but are only used in 1 or 2 top-level project folders:"
               foreach ($pkg in $recommendations.Keys) {
                   $folders = $recommendations[$pkg]
                   Write-Host "`n🔹 Package: $pkg"
