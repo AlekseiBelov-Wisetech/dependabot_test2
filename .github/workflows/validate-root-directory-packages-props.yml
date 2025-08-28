@@ -33,8 +33,6 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          Write-Host "🔍 Analyzing root Directory.Packages.props..."
-
           # Determine skipped folders (from input or env)
           $inputSkipped = "${{ github.event.inputs.skippedFolders }}"
           if ([string]::IsNullOrWhiteSpace($inputSkipped)) {
@@ -45,6 +43,9 @@ jobs:
             if ([string]::IsNullOrWhiteSpace($usageThreshold)) {
             $usageThreshold = "$env:DEFAULT_USAGE_THRESHOLD"
           }
+
+          Write-Host "🔍 Analyzing root Directory.Packages.props..."
+          Write-Host "🔧 UsageThreshold for root packages: $usageThreshold"
 
           $skippedFolders = $inputSkipped -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
           Write-Host "🚫 Skipping packages used in folders: $($skippedFolders -join ', ')"
