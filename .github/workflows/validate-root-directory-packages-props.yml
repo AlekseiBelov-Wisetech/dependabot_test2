@@ -122,5 +122,7 @@ jobs:
                   }
                   Write-Host "   👉 Consider moving '$pkg' to that project's Directory.Packages.props file instead."
               }
-              Write-Warning "`n⚠️ Recommendation complete. No enforcement applied."
+          
+              Write-Error "`n❌ Action failed: One or more packages should be moved out of the root Directory.Packages.props file."
+              exit 1
           }
