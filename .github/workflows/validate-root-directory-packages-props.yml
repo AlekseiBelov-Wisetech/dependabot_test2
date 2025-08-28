@@ -103,7 +103,6 @@ jobs:
           # Find root packages that are used in <=2 project folders (excluding skipped ones)
           $recommendations = @{}
 
-          Write-Host "📁 The following packages are skipped from checking as they use is skipped folders:"
           foreach ($pkg in $rootPackages) {
               if ($usedInSkippedFolders[$pkg]) {
                   Write-Host "📁 Skipping '$pkg'"
