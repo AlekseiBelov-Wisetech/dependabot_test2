@@ -7,6 +7,10 @@ on:
 
   workflow_dispatch:
     inputs:
+      usageThreshold:
+        description: 'Maximum number of folders a package can be used in to trigger a recommendation'
+        required: false
+        default: '2'
       skippedFolders:
         description: 'Comma-separated list of top-level folders to skip (e.g., Common,Shared)'
         required: false
@@ -18,6 +22,7 @@ jobs:
 
     env:
       DEFAULT_SKIPPED_FOLDERS: 'Common'  # Used in pull_request if no manual input
+      DEFAULT_USAGE_THRESHOLD: '2'
 
     steps:
       - name: Checkout repository
@@ -34,6 +39,11 @@ jobs:
           $inputSkipped = "${{ github.event.inputs.skippedFolders }}"
           if ([string]::IsNullOrWhiteSpace($inputSkipped)) {
               $inputSkipped = "$env:DEFAULT_SKIPPED_FOLDERS"
+          }
+          
+          $usageThreshold = "${{ github.event.inputs.usageThreshold }}"
+            if ([string]::IsNullOrWhiteSpace($usageThreshold)) {
+            $usageThreshold = "$env:DEFAULT_USAGE_THRESHOLD"
           }
 
           $skippedFolders = $inputSkipped -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
@@ -104,7 +114,7 @@ jobs:
               $folders = $usageMap[$pkg]
               $folderCount = $folders.Count
 
-              if ($folderCount -le 2) {
+              if ($folderCount -gt 0 -and $folderCount -le $usageThreshold) {
                   $recommendations[$pkg] = $folders
               }
           }
