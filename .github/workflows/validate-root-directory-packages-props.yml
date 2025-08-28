@@ -64,8 +64,6 @@ jobs:
             exit 0
           }
 
-          Write-Host "📦 Packages in root: $($rootPackages -join ', ')"
-
           # Initialize usage tracking
           $usageMap = @{}
           $usedInSkippedFolders = @{}
