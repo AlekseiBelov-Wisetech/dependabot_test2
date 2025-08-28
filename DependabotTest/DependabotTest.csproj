@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
+        <PackageReference Include="AMQPNetLite" />
         <PackageReference Include="AWSSDK.S3" />
         <PackageReference Include="BouncyCastle" />
         <PackageReference Include="Microsoft.AspNetCore.App" />
