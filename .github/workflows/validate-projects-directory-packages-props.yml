@@ -14,7 +14,7 @@ on:
         default: '2'
 
 jobs:
-  validate-packages:
+  validate-project-level-packages:
     runs-on: windows-latest
 
     steps:
