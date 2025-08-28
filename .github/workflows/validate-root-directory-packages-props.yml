@@ -1,0 +1,94 @@
+name: Validate Root Directory.Packages.props
+
+on:
+  pull_request:
+    paths:
+      - 'Directory.Packages.props'
+
+  workflow_dispatch:
+
+jobs:
+  suggest-package-demotion:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Analyze root-level packages across project folders
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "🔍 Analyzing root Directory.Packages.props..."
+
+          $rootPath = Join-Path $PWD "Directory.Packages.props"
+          if (-not (Test-Path $rootPath)) {
+            Write-Error "❌ Root Directory.Packages.props not found!"
+            exit 1
+          }
+
+          [xml]$rootXml = Get-Content $rootPath
+          $rootPackages = $rootXml.Project.ItemGroup.PackageVersion | ForEach-Object { $_.Include }
+
+          if (-not $rootPackages) {
+            Write-Host "✅ No packages defined in root. Nothing to check."
+            exit 0
+          }
+
+          Write-Host "📦 Packages in root: $($rootPackages -join ', ')"
+
+          # Map: package -> set of top-level folders where it's used
+          $usageMap = @{}
+          foreach ($pkg in $rootPackages) {
+              $usageMap[$pkg] = New-Object System.Collections.Generic.HashSet[string]
+          }
+
+          # Get all csproj files
+          $csprojFiles = Get-ChildItem -Recurse -Filter *.csproj
+
+          foreach ($file in $csprojFiles) {
+              $relativePath = $file.FullName.Substring($PWD.Path.Length + 1)
+              $parts = $relativePath -split '\\|\/'
+              if ($parts.Length -lt 2) {
+                  # Skip csproj files not inside a top-level folder
+                  continue
+              }
+
+              $topFolder = $parts[0]
+
+              [xml]$csprojXml = Get-Content $file.FullName
+              $packageRefs = $csprojXml.Project.ItemGroup.PackageReference | ForEach-Object { $_.Include }
+
+              foreach ($pkg in $rootPackages) {
+                  if ($packageRefs -contains $pkg) {
+                      $null = $usageMap[$pkg].Add($topFolder)
+                  }
+              }
+          }
+
+          $recommendations = @{}
+
+          foreach ($entry in $usageMap.GetEnumerator()) {
+              $pkg = $entry.Key
+              $folders = $entry.Value
+              $folderCount = $folders.Count
+              if ($folderCount -le 2) {
+                  $recommendations[$pkg] = $folders
+              }
+          }
+
+          if ($recommendations.Count -eq 0) {
+              Write-Host "`n✅ All root packages are widely used across project folders. No recommendations."
+          } else {
+              Write-Host "`n🔔 The following packages are defined in the root Directory.Packages.props but are only used in 1 or 2 project folders:"
+              foreach ($pkg in $recommendations.Keys) {
+                  $folders = $recommendations[$pkg]
+                  Write-Host "`n🔹 Package: $pkg"
+                  foreach ($folder in $folders) {
+                      Write-Host "   - Used in folder: $folder"
+                  }
+                  Write-Host "   👉 Consider moving '$pkg' to that project's Directory.Packages.props file instead."
+              }
+              Write-Warning "`n⚠️ Recommendation complete. No enforcement applied."
+          }
