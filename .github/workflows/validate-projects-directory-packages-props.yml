@@ -4,8 +4,7 @@ on:
   pull_request:
     paths:
       - '**/Directory.Packages.props'      
-      - '!Directory.Packages.props'  # Exclude the root-level file
-																  
+      - '!Directory.Packages.props'  # Exclude the root-level file											  
 
   workflow_dispatch:
     inputs:
