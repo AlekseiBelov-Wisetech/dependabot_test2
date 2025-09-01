@@ -11,17 +11,12 @@ on:
         description: 'Maximum number of folders a package can be used in to trigger a recommendation'
         required: false
         default: '2'
-      skippedFolders:
-        description: 'Comma-separated list of top-level folders to skip (e.g., Common,Shared)'
-        required: false
-        default: 'Common'
 
 jobs:
   validate-root-package-usage:
     runs-on: windows-latest
 
     env:
-      DEFAULT_SKIPPED_FOLDERS: 'Common'  # Used in pull_request if no manual input
       DEFAULT_USAGE_THRESHOLD: '2'
 
     steps:
@@ -33,105 +28,105 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          # Determine skipped folders (from input or env)
-          $inputSkipped = "${{ github.event.inputs.skippedFolders }}"
-          if ([string]::IsNullOrWhiteSpace($inputSkipped)) {
-              $inputSkipped = "$env:DEFAULT_SKIPPED_FOLDERS"
-          }
-          
           $usageThreshold = "${{ github.event.inputs.usageThreshold }}"
-            if ([string]::IsNullOrWhiteSpace($usageThreshold)) {
-            $usageThreshold = "$env:DEFAULT_USAGE_THRESHOLD"
+          if ([string]::IsNullOrWhiteSpace($usageThreshold)) {
+              $usageThreshold = "$env:DEFAULT_USAGE_THRESHOLD"
           }
 
           Write-Host "🔍 Analyzing root Directory.Packages.props..."
           Write-Host "🔧 UsageThreshold for root packages: $usageThreshold"
 
-          $skippedFolders = $inputSkipped -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-          Write-Host "🚫 Skipping packages used in folders: $($skippedFolders -join ', ')"
-
-          # Load root-level packages
+          # Load root Directory.Packages.props
           $rootPath = Join-Path $PWD "Directory.Packages.props"
           if (-not (Test-Path $rootPath)) {
-            Write-Error "❌ Root Directory.Packages.props not found!"
-            exit 1
+              Write-Error "❌ Root Directory.Packages.props not found!"
+              exit 1
           }
 
           [xml]$rootXml = Get-Content $rootPath
           $rootPackages = $rootXml.Project.ItemGroup.PackageVersion | ForEach-Object { $_.Include }
 
           if (-not $rootPackages) {
-            Write-Host "✅ No packages defined in root. Nothing to check."
-            exit 0
+              Write-Host "✅ No packages defined in root. Nothing to check."
+              exit 0
           }
 
-          # Initialize usage tracking
+          # Map each root package to a set of project folders
           $usageMap = @{}
-          $usedInSkippedFolders = @{}
-
           foreach ($pkg in $rootPackages) {
               $usageMap[$pkg] = New-Object System.Collections.Generic.HashSet[string]
-              $usedInSkippedFolders[$pkg] = $false
           }
 
-          # Get all .csproj files
+          # Find all folders containing Build.xml
+          $buildXmlFiles = Get-ChildItem -Recurse -Filter Build.xml
+
+          if ($buildXmlFiles.Count -eq 0) {
+              Write-Error "❌ No Build.xml files found. Cannot determine project folders."
+              exit 1
+          }
+
+          $projectFolders = @{}
+          foreach ($buildFile in $buildXmlFiles) {
+              $projectPath = $buildFile.Directory.FullName
+              $projectFolderName = Split-Path $projectPath -Leaf
+              $projectFolders[$projectPath] = $projectFolderName
+          }
+
+          # Scan all .csproj files
           $csprojFiles = Get-ChildItem -Recurse -Filter *.csproj
 
           foreach ($file in $csprojFiles) {
-              $relativePath = $file.FullName.Substring($PWD.Path.Length + 1)
-              $parts = $relativePath -split '[\\/]'  # Normalize path for Windows/Linux
+              $csprojDir = $file.Directory.FullName
 
-              if ($parts.Length -lt 2) {
-                  continue  # Skip files not inside a folder
+              # Match the csproj file to a known project folder (exact Build.xml folder)
+              $matchedFolder = $null
+              foreach ($projectPath in $projectFolders.Keys) {
+                  if ($csprojDir -like "$projectPath*") {
+                      $matchedFolder = $projectFolders[$projectPath]
+                      break
+                  }
               }
 
-              $topFolder = $parts[0]
+              if (-not $matchedFolder) {
+                  continue  # Skip csproj files outside known project folders
+              }
 
               [xml]$csprojXml = Get-Content $file.FullName
               $packageRefs = $csprojXml.Project.ItemGroup.PackageReference | ForEach-Object { $_.Include }
 
               foreach ($pkg in $rootPackages) {
                   if ($packageRefs -contains $pkg) {
-                      if ($skippedFolders -contains $topFolder) {
-                          $usedInSkippedFolders[$pkg] = $true
-                      } else {
-                          $null = $usageMap[$pkg].Add($topFolder)
-                      }
+                      $null = $usageMap[$pkg].Add($matchedFolder)
                   }
               }
           }
 
-          # Find root packages that are used in <=2 project folders (excluding skipped ones)
+          # Find root packages used in <= usageThreshold project folders
           $recommendations = @{}
 
           foreach ($pkg in $rootPackages) {
-              if ($usedInSkippedFolders[$pkg]) {
-                  Write-Host "📁 Skipping '$pkg'"
-                  continue
-              }
-
               $folders = $usageMap[$pkg]
               $folderCount = $folders.Count
 
-              if ($folderCount -gt 0 -and $folderCount -le $usageThreshold) {
+              if ($folderCount -gt 0 -and $folderCount -le [int]$usageThreshold) {
                   $recommendations[$pkg] = $folders
               }
           }
 
-          # Output results
+          # Output recommendations
           if ($recommendations.Count -eq 0) {
-              Write-Host "`n✅ All root packages are widely used or used in skipped folders. No recommendations."
+              Write-Host "`n✅ All root packages are widely used. No recommendations."
           } else {
-              Write-Host "`n🔔 The following packages are defined in the root Directory.Packages.props but are only used in 1 or 2 top-level project folders:"
+              Write-Host "`n🔔 The following packages are defined in the root Directory.Packages.props but are only used in $usageThreshold or fewer project folders:"
               foreach ($pkg in $recommendations.Keys) {
                   $folders = $recommendations[$pkg]
                   Write-Host "`n🔹 Package: $pkg"
                   foreach ($folder in $folders) {
-                      Write-Host "   - Used in folder: $folder"
+                      Write-Host "   - Used in project folder: $folder"
                   }
                   Write-Host "   👉 Consider moving '$pkg' to that project's Directory.Packages.props file instead."
               }
-          
+
               Write-Error "`n❌ Action failed: One or more packages should be moved out of the root Directory.Packages.props file."
               exit 1
           }
