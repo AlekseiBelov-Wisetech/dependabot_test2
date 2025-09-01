@@ -57,38 +57,38 @@ jobs:
               $usageMap[$pkg] = New-Object System.Collections.Generic.HashSet[string]
           }
 
-          # Get all Build.xml files to identify project folders
+          # Find all folders containing Build.xml
           $buildXmlFiles = Get-ChildItem -Recurse -Filter Build.xml
 
           if ($buildXmlFiles.Count -eq 0) {
-              Write-Error "❌ No Build.xml files found in the repo. Cannot determine project folders."
+              Write-Error "❌ No Build.xml files found. Cannot determine project folders."
               exit 1
           }
 
           $projectFolders = @{}
           foreach ($buildFile in $buildXmlFiles) {
-              $projectFolder = Split-Path $buildFile.DirectoryName
-              $projectFolderName = Split-Path $projectFolder -Leaf
-              $projectFolders[$projectFolder] = $projectFolderName
+              $projectPath = $buildFile.Directory.FullName
+              $projectFolderName = Split-Path $projectPath -Leaf
+              $projectFolders[$projectPath] = $projectFolderName
           }
 
-          # Scan .csproj files
+          # Scan all .csproj files
           $csprojFiles = Get-ChildItem -Recurse -Filter *.csproj
 
           foreach ($file in $csprojFiles) {
-              $csprojDir = Split-Path $file.Directory.FullName
+              $csprojDir = $file.Directory.FullName
 
-              # Find the closest project folder this .csproj belongs to
+              # Match the csproj file to a known project folder (exact Build.xml folder)
               $matchedFolder = $null
-              foreach ($folder in $projectFolders.Keys) {
-                  if ($csprojDir -like "$folder*") {
-                      $matchedFolder = $projectFolders[$folder]
+              foreach ($projectPath in $projectFolders.Keys) {
+                  if ($csprojDir -like "$projectPath*") {
+                      $matchedFolder = $projectFolders[$projectPath]
                       break
                   }
               }
 
               if (-not $matchedFolder) {
-                  continue  # Skip .csproj files not under any known project folder
+                  continue  # Skip csproj files outside known project folders
               }
 
               [xml]$csprojXml = Get-Content $file.FullName
@@ -122,7 +122,7 @@ jobs:
                   $folders = $recommendations[$pkg]
                   Write-Host "`n🔹 Package: $pkg"
                   foreach ($folder in $folders) {
-                      Write-Host "   - Used in project: $folder"
+                      Write-Host "   - Used in project folder: $folder"
                   }
                   Write-Host "   👉 Consider moving '$pkg' to that project's Directory.Packages.props file instead."
               }
