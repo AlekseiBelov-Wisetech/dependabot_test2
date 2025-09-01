@@ -67,7 +67,7 @@ jobs:
 
           $projectFolders = @{}
           foreach ($buildFile in $buildXmlFiles) {
-              $projectFolder = Split-Path $buildFile.DirectoryName -Parent
+              $projectFolder = Split-Path $buildFile.DirectoryName
               $projectFolderName = Split-Path $projectFolder -Leaf
               $projectFolders[$projectFolder] = $projectFolderName
           }
