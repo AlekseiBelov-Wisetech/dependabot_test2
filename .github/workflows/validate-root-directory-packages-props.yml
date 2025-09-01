@@ -28,6 +28,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
+          # Read threshold from input or default
           $usageThreshold = "${{ github.event.inputs.usageThreshold }}"
           if ([string]::IsNullOrWhiteSpace($usageThreshold)) {
               $usageThreshold = "$env:DEFAULT_USAGE_THRESHOLD"
@@ -59,36 +60,40 @@ jobs:
 
           # Find all folders containing Build.xml
           $buildXmlFiles = Get-ChildItem -Recurse -Filter Build.xml
-
           if ($buildXmlFiles.Count -eq 0) {
               Write-Error "❌ No Build.xml files found. Cannot determine project folders."
               exit 1
           }
 
+          # Map Build.xml folder paths to their relative names
+          $repoRoot = (Get-Location).Path
           $projectFolders = @{}
           foreach ($buildFile in $buildXmlFiles) {
               $projectPath = $buildFile.Directory.FullName
-              $projectFolderName = Split-Path $projectPath -Leaf
-              $projectFolders[$projectPath] = $projectFolderName
+              $relativeProjectPath = $projectPath.Substring($repoRoot.Length + 1).TrimStart('\')
+              $projectFolders[$projectPath] = $relativeProjectPath
           }
 
-          # Scan all .csproj files
+          # Scan all .csproj files and map to deepest matching Build.xml folder
           $csprojFiles = Get-ChildItem -Recurse -Filter *.csproj
 
           foreach ($file in $csprojFiles) {
               $csprojDir = $file.Directory.FullName
-
-              # Match the csproj file to a known project folder (exact Build.xml folder)
               $matchedFolder = $null
+              $longestMatchLength = -1
+
               foreach ($projectPath in $projectFolders.Keys) {
-                  if ($csprojDir -like "$projectPath*") {
-                      $matchedFolder = $projectFolders[$projectPath]
-                      break
+                  if ($csprojDir.StartsWith($projectPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+                      $matchLength = $projectPath.Length
+                      if ($matchLength -gt $longestMatchLength) {
+                          $longestMatchLength = $matchLength
+                          $matchedFolder = $projectFolders[$projectPath]
+                      }
                   }
               }
 
               if (-not $matchedFolder) {
-                  continue  # Skip csproj files outside known project folders
+                  continue  # Skip csproj files not under any known Build.xml folder
               }
 
               [xml]$csprojXml = Get-Content $file.FullName
@@ -103,7 +108,6 @@ jobs:
 
           # Find root packages used in <= usageThreshold project folders
           $recommendations = @{}
-
           foreach ($pkg in $rootPackages) {
               $folders = $usageMap[$pkg]
               $folderCount = $folders.Count
