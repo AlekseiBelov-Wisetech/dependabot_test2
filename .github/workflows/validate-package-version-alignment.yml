@@ -1,0 +1,77 @@
+﻿name: Validate Package Version Alignment
+
+on:
+  pull_request:
+    paths:
+      - '**/Directory.Packages.props'
+
+  workflow_dispatch: {}
+
+jobs:
+  validate-package-alignment:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate that package versions are aligned across Directory.Packages.props files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "🔍 Searching for all Directory.Packages.props files..."
+          $propsFiles = Get-ChildItem -Recurse -Filter 'Directory.Packages.props'
+
+          if ($propsFiles.Count -eq 0) {
+              Write-Host "✅ No Directory.Packages.props files found."
+              exit 0
+          }
+
+          $packageMap = @{}
+
+          foreach ($file in $propsFiles) {
+              $fullPath = $file.FullName
+              $relativePath = $fullPath.Substring($PWD.Path.Length + 1)
+
+              [xml]$xml = Get-Content $fullPath
+
+              $versions = $xml.Project.ItemGroup.PackageVersion
+              if ($versions -eq $null) { continue }
+
+              foreach ($pkg in $versions) {
+                  $id = $pkg.Include
+                  $version = $pkg.Version
+
+                  if (-not $packageMap.ContainsKey($id)) {
+                      $packageMap[$id] = @{}
+                  }
+
+                  $packageMap[$id][$relativePath] = $version
+              }
+          }
+
+          $mismatched = @{}
+
+          foreach ($pkg in $packageMap.Keys) {
+              $versions = $packageMap[$pkg].Values | Sort-Object -Unique
+              if ($versions.Count -gt 1) {
+                  $mismatched[$pkg] = $packageMap[$pkg]
+              }
+          }
+
+          if ($mismatched.Count -eq 0) {
+              Write-Host "✅ All packages are aligned across Directory.Packages.props files."
+              exit 0
+          }
+
+          Write-Host "`n❌ The following packages have version mismatches:"
+          foreach ($pkg in $mismatched.Keys) {
+              Write-Host "`n🔹 Package: $pkg"
+              foreach ($entry in $mismatched[$pkg].GetEnumerator()) {
+                  Write-Host "   - $($entry.Key): Version $($entry.Value)"
+              }
+          }
+
+          Write-Error "`n❌ Package version alignment check failed. Please align versions in Directory.Packages.props files."
+          exit 1
