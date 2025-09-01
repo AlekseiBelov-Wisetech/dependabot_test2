@@ -4,6 +4,7 @@
   <ItemGroup>
     <PackageVersion Include="AwsSignatureVersion4" Version="5.0.1" />
     <PackageVersion Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageVersion Include="NEST" Version="7.17.5" />
     <PackageVersion Include="Snappier" Version="1.1.0" />
   </ItemGroup>
 </Project>
