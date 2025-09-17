@@ -3,7 +3,7 @@ name: Validate Root Directory.Packages.props
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'Directory.Packages.props'
 
