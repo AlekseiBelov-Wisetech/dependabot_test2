@@ -3,7 +3,7 @@ name: Validate Root Directory.Packages.props
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'Directory.Packages.props'
 
@@ -72,7 +72,7 @@ jobs:
           $projectFolders = @{}
           foreach ($buildFile in $buildXmlFiles) {
               $projectPath = $buildFile.Directory.FullName
-              $relativeProjectPath = $projectPath.Substring($repoRoot.Length + 1).TrimStart('/')
+              $relativeProjectPath = $projectPath.Substring($repoRoot.Length + 1).TrimStart('\')
               $projectFolders[$projectPath] = $relativeProjectPath
           }
 
