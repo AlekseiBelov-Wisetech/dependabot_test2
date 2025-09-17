@@ -1,0 +1,82 @@
+﻿name: Validate Projects' Directory.Packages.props
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/Directory.Packages.props'
+      - '!Directory.Packages.props'  # Exclude the root-level file											  
+
+  workflow_dispatch:
+    inputs:
+      maxProjectDuplicates:
+        description: 'Maximum number of project-level props files a package can appear in before it is considered a violation'
+        required: false
+        default: '2'
+
+jobs:
+  validate-project-level-packages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate Directory.Packages.props usage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # SETTINGS
+          $defaultMaxAllowed = 2
+          $maxAllowedInput = "${{ github.event.inputs.maxProjectDuplicates }}"
+          if ([string]::IsNullOrWhiteSpace($maxAllowedInput)) {
+              $maxAllowed = $defaultMaxAllowed
+          } else {
+              $maxAllowed = [int]$maxAllowedInput
+          }
+
+          Write-Host "🔧 Max allowed duplicates per package: $maxAllowed"
+          Write-Host "🔍 Scanning for Directory.Packages.props files..."
+
+          $allProps = Get-ChildItem -Recurse -Filter "Directory.Packages.props"
+          $rootProps = $allProps | Where-Object { $_.DirectoryName -eq (Get-Location).Path }
+          $projectProps = $allProps | Where-Object { $_.FullName -ne $rootProps.FullName }
+
+          $packageUsage = @{}
+
+          foreach ($file in $projectProps) {
+              [xml]$xml = Get-Content $file.FullName
+
+              $packages = $xml.Project.ItemGroup.PackageVersion
+              foreach ($pkg in $packages) {
+                  $id = $pkg.Include
+                  if (-not $packageUsage.ContainsKey($id)) {
+                      $packageUsage[$id] = @()
+                  }
+                  $packageUsage[$id] += $file.FullName
+              }
+          }
+
+          $violations = @{}
+
+          foreach ($entry in $packageUsage.GetEnumerator()) {
+              if ($entry.Value.Count -gt $maxAllowed) {
+                  $violations[$entry.Key] = $entry.Value
+              }
+          }
+
+          if ($violations.Count -gt 0) {
+              Write-Host "`n❌ The following packages are used in more than $maxAllowed project-level Directory.Packages.props files:"
+              foreach ($pkg in $violations.Keys) {
+                  Write-Host "`n🔸 Package: $pkg"
+                  foreach ($path in $violations[$pkg]) {
+                      Write-Host "   - $path"
+                  }
+              }
+              Write-Error "`n🛑 Some packages are overused. Please move them to the root Directory.Packages.props."
+              exit 1
+          } else {
+              Write-Host "`n✅ All packages are within the allowed threshold ($maxAllowed)."
+          }

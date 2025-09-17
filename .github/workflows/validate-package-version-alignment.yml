@@ -1,7 +1,9 @@
 ﻿name: Validate Package Version Alignment
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - '**/Directory.Packages.props'
 
@@ -9,7 +11,7 @@ on:
 
 jobs:
   validate-package-alignment:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository

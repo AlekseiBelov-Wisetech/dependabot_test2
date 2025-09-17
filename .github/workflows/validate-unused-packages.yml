@@ -6,7 +6,7 @@ on:
 jobs:
   validate-unused-packages:
     name: Detect Unused Packages in Directory.Packages.props
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
