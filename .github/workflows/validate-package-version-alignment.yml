@@ -19,5 +19,5 @@ jobs:
 
       - name: Validate that package versions are aligned across Directory.Packages.props files
         shell: pwsh
-        run: scripts/validate-package-version-alignment.ps1
+        run: ./.github/scripts/validate-package-version-alignment.ps1
           
