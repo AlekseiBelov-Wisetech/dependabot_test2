@@ -1,0 +1,27 @@
+name: Validate Root Directory.Packages.props
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Directory.Packages.props'
+
+  workflow_dispatch:
+    inputs:
+      usageThreshold:
+        description: 'Maximum number of folders a package can be used in to trigger a recommendation'
+        required: false
+        default: '2'
+
+jobs:
+  validate-root-package-usage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Analyze root-level packages across project folders
+        shell: pwsh
+        run: ./.github/scripts/validate-root-directory-packages-props.ps1 -UsageThreshold ${{ inputs.usageThreshold }}
