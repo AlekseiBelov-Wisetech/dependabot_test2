@@ -3,15 +3,15 @@
 Write-Host "🔍 Scanning for unused NuGet packages..."
 
 # Path to the exception list file
-$exceptionFilePath = ".github/scripts/unused-packages-exceptions.txt"
+$exceptionFilePath = ".github/scripts/unused-packages-exclude-list.txt"
 
 # Read the exception list
 $exceptionPackages = @()
 if (Test-Path $exceptionFilePath) {
     $exceptionPackages = Get-Content $exceptionFilePath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    Write-Host "ℹ️  Loaded exception list from $exceptionFilePath"
+    Write-Host "ℹ️  Loaded exclude list from $exceptionFilePath"
 } else {
-    Write-Host "⚠️  Exception file not found. No packages will be excluded."
+    Write-Host "⚠️  exclude list file not found. No packages will be excluded."
 }
 
 $propsFiles = Get-ChildItem -Recurse -Filter 'Directory.Packages.props'
