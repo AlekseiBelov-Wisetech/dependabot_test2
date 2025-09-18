@@ -2,6 +2,18 @@
 
 Write-Host "🔍 Scanning for unused NuGet packages..."
 
+# Path to the exception list file
+$exceptionFilePath = ".github/scripts/unused-packages-exceptions.txt"
+
+# Read the exception list
+$exceptionPackages = @()
+if (Test-Path $exceptionFilePath) {
+    $exceptionPackages = Get-Content $exceptionFilePath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    Write-Host "ℹ️  Loaded exception list from $exceptionFilePath"
+} else {
+    Write-Host "⚠️  Exception file not found. No packages will be excluded."
+}
+
 $propsFiles = Get-ChildItem -Recurse -Filter 'Directory.Packages.props'
 $allProjects = Get-ChildItem -Recurse -Include *.csproj, Directory.Build.props
 
@@ -43,10 +55,12 @@ foreach ($propsFile in $propsFiles) {
         }
     }
 
-    $unusedPackages = $declaredPackages | Where-Object { -not $usedPackages.ContainsKey($_) }
+    $unusedPackages = $declaredPackages | Where-Object {
+        -not $usedPackages.ContainsKey($_) -and -not $exceptionPackages.Contains($_)
+    }
 
     if ($unusedPackages.Count -eq 0) {
-        Write-Host "  ✅ All packages are used."
+        Write-Host "  ✅ All packages are used or excluded."
     } else {
         Write-Host "  ❌ Unused packages detected:"
         $unusedPackages | ForEach-Object { Write-Host "    - $_" }

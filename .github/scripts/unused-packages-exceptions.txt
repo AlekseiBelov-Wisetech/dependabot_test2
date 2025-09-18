@@ -1,0 +1,2 @@
+CsvHelper
+System.Data.SQLite
