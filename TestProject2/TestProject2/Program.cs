@@ -5,7 +5,7 @@ class Program
 {
 	static void Main()
 	{
-		string originalText = "Hello, this is a test string to compress using Snappy!";
+		string originalText = "Hello, this is a test string to compress using Snappy New!";
 		Console.WriteLine("Original: " + originalText);
 
 		// Convert string to byte array
