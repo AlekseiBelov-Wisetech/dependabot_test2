@@ -24,4 +24,4 @@ jobs:
 
       - name: Analyze root-level packages across project folders
         shell: pwsh
-        run: ./.github/scripts/validate-root-directory-packages-props.ps1 -UsageThreshold ${{ inputs.usageThreshold }}
+        run: ./.github/scripts/validate-root-directory-packages-props.ps1 -UsageThreshold '${{ inputs.usageThreshold || 2 }}'

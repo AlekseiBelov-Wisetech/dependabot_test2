@@ -25,4 +25,4 @@ jobs:
 
       - name: Validate Projects' Directory.Packages.props usage
         shell: pwsh
-        run: ./.github/scripts/validate-projects-directory-packages-props.ps1 -UsageThreshold ${{ inputs.usageThreshold }}
+        run: ./.github/scripts/validate-projects-directory-packages-props.ps1 -UsageThreshold '${{ inputs.usageThreshold || 2 }}'
