@@ -10,6 +10,6 @@
   <ItemGroup>
     <!-- Optionally add a PackageReference or two so Dependabot knows what packages exist -->
     <!-- These should match some of your central package entries (or none) -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Polly" />
   </ItemGroup>
 </Project>
