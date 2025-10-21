@@ -2,7 +2,10 @@ version: 2
 updates:
   - package-ecosystem: "nuget"
     directories:
-      - "**/*"  
+      - "/TestProject2"
+      - "/TestProject3"
+      - "/DependabotTest"
+      - "/Common"
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 2
