@@ -1,0 +1,22 @@
+name: Submit Dependencies Without Restore (NuGet)
+
+on:
+  workflow_dispatch:       # Allows manual triggering
+
+jobs:
+  submit-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'  # Adjust to match your project(s)
+
+      - name: Submit NuGet dependencies from project files (no restore)
+        uses: actions/dependency-submission-action@v1
+        with:
+          use-dotnet-project-files: true
